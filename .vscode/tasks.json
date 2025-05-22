@@ -1,0 +1,26 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "build-laplace",
+            "type": "shell",
+            "command": "g++",
+            "args": [
+                "main.cpp",                        // Path to your main
+                "-I../include",                    // Path to UI.h
+                "-o", "laplace_calc",              // Output binary name
+                "-lsfml-graphics",
+                "-lsfml-window",
+                "-lsfml-system"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/src"    // Adjust if you're not in src/
+            },
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": ["$gcc"]
+        }
+    ]
+}
