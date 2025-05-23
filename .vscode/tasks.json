@@ -6,7 +6,10 @@
             "type": "shell",
             "command": "g++",
             "args": [
-                "main.cpp",                        // Path to your main
+                "main.cpp", 
+                "parser.cpp" , 
+                "laplace_transforms.cpp" , 
+                "Solve.cpp" ,                      // Path to your main
                 "-I../include",                    // Path to UI.h
                 "-o", "laplace_calc",              // Output binary name
                 "-lsfml-graphics",

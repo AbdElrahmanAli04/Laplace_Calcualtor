@@ -11,9 +11,9 @@ class Button {
     bool isPressed = false;
 
 
-    Button(const sf::Vector2f& size, const sf::Font& font, const std::wstring& label) {
+    Button(const sf::Vector2f& size, const sf::Font& font, const std::wstring& label   ) {
         shape.setSize(size);
-        shape.setFillColor(sf::Color(200, 200, 200));
+        shape.setFillColor(sf::Color(244, 187, 68)); 
         shape.setOutlineColor(sf::Color::Black);
         shape.setOutlineThickness(2);
 
@@ -54,19 +54,46 @@ class Button {
     }
 };
 
+class Cursor : public sf::RectangleShape {
+    private : 
+        float _blinkRate = 0.5f; 
+        bool _showCursor = true;
+
+
+    public : 
+
+    Cursor() {
+        this->setSize(sf::Vector2f(2, 24)) ;
+        this->setFillColor(sf::Color::Black);
+    }
+    
+    bool IsShown () {
+        return _showCursor ;
+    }
+
+    float getBlinkRate() {
+        return _blinkRate ;
+    }
+
+    void ReverseState() {
+        _showCursor = !_showCursor ;
+    }
+
+};
+
 
 class UI {
 private:
 
     void setupLabels(std::vector<std::wstring> &labels , std::vector<Button> &buttons , sf::Font &font ) {
     
-    std::vector<std::wstring> Operators = {L" * ", L" + ", L" - ", L" / ", L"=", L"^", L"0", L"(", L")", L"del", L"C"};
+    std::vector<std::wstring> Operators = {L" * ", L" + ", L" - ", L" / ", L".", L"^", L"0", L"(", L")", L"del", L"C" , L"="};
 
     //Setting the Functions and symbols
 
     float btnWidth = 70, btnHeight = 50;
     float startX = 20, startY = 300;
-    int buttonsPerRow = 4;
+    int buttonsPerRow = 3;
 
     for (int i = 0; i < labels.size(); ++i) {
         Button button({btnWidth, btnHeight}, font, labels[i]);

@@ -2,33 +2,43 @@
 #include <vector>
 #include <string>
 #include "../include/UI.h" 
+#include "../include/parser.h" 
+#include "../include/laplace_transforms.h" 
+
+#include "Solve.cpp"
 
 
 int main() {
 
-    sf::RenderWindow window(sf::VideoMode(800, 600), "Laplace Calculator");
+    sf::RenderWindow window(sf::VideoMode(800, 600), "Laplace Calculator" );
+    sf::Texture Mango ; 
+
+    Mango.loadFromFile("../assets/pngtree-sweet-mango-fruit-png-png-image_11495826.png");
+
     window.setFramerateLimit(60);
+
+    sf::Sprite Mangosprite;
+    Mangosprite.setTexture(Mango);
+    Mangosprite.setScale(0.7,0.7);
+    Mangosprite.setPosition(300,50) ;
 
     sf::Font font;
     if (!font.loadFromFile("../assets/ARIAL.TTF")) {
         return -1;
     }
     
-    sf::RectangleShape cursor(sf::Vector2f(2, 24)); // Thin vertical line
-    cursor.setFillColor(sf::Color::Black);
+    //Setting Cursor 
     sf::Clock clock;
-    bool showCursor = true;
-    float blinkRate = 0.5f; 
-
+    Cursor cursor ; 
 
     // Making the Calc buttons
-    std::vector<std::wstring> labels = {L"sin", L"cos", L"sinh" , L"cosh" , L"e" , L"π", L"t"};
+    std::vector<std::wstring> labels = {L"sin", L"cos", L"sinh" , L"cosh" , L"e", L"t" };
     std::vector<Button> buttons;
 
     sf::RectangleShape inputBox(sf::Vector2f(760, 50));
     sf::Text inputText;
     std::wstring inputStr;
-
+    std::string Result ;
 
 
     //Setting Up UI
@@ -49,8 +59,8 @@ int main() {
                 }
             }
 
-            if (clock.getElapsedTime().asSeconds() >= blinkRate) {
-                showCursor = !showCursor;
+            if (clock.getElapsedTime().asSeconds() >= cursor.getBlinkRate()) {
+                cursor.ReverseState();
                 clock.restart();
             }
 
@@ -67,7 +77,7 @@ int main() {
                             }
                             else if (label == L"C")
                                 inputStr.clear();
-                            else if (label == L"del") {
+                            else if (label == L"del" && inputStr.size() != 0 ) {
                                 if ( inputStr.back() == L's'|| inputStr.back() == L'n' ) {
                                     for (int i = 0 ; i<3 ; i++) {
                                         inputStr.pop_back();
@@ -83,11 +93,15 @@ int main() {
                                 }
                             }
                             else if (label == L"=") {
-                                //Solve function , takes the string as argument by ref and replace it by the solution 
+                                Solve ComputeSoltion (inputStr) ;
                             }
-                            else
-                                inputStr += label;
+
+                            else if (label != L"del") {
+                                inputStr += label; 
+                            }
+
                             inputText.setString(inputStr);
+                            
                         }
                     }
                 }
@@ -100,13 +114,15 @@ int main() {
         // Rendering
         window.clear(sf::Color(50, 50, 50));
         window.draw(inputBox);
-        window.draw(inputText  /* + Cursor*/);
+        window.draw(inputText );
         for (auto& button : buttons)
             button.draw(window);
 
-        if (showCursor)
+        if (cursor.IsShown()){
             window.draw(cursor);
+        }
 
+        window.draw(Mangosprite) ;
         window.display();
     }
 
