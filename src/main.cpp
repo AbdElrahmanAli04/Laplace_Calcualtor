@@ -14,6 +14,13 @@ int main() {
         return -1;
     }
     
+    sf::RectangleShape cursor(sf::Vector2f(2, 24)); // Thin vertical line
+    cursor.setFillColor(sf::Color::Black);
+    sf::Clock clock;
+    bool showCursor = true;
+    float blinkRate = 0.5f; 
+
+
     // Making the Calc buttons
     std::vector<std::wstring> labels = {L"sin", L"cos", L"sinh" , L"cosh" , L"e" , L"π", L"t"};
     std::vector<Button> buttons;
@@ -21,6 +28,7 @@ int main() {
     sf::RectangleShape inputBox(sf::Vector2f(760, 50));
     sf::Text inputText;
     std::wstring inputStr;
+
 
 
     //Setting Up UI
@@ -41,6 +49,12 @@ int main() {
                 }
             }
 
+            if (clock.getElapsedTime().asSeconds() >= blinkRate) {
+                showCursor = !showCursor;
+                clock.restart();
+            }
+
+
             if (event.type == sf::Event::MouseButtonReleased) {
                 for (auto& button : buttons) {
                     if (button.isPressed) {
@@ -54,7 +68,19 @@ int main() {
                             else if (label == L"C")
                                 inputStr.clear();
                             else if (label == L"del") {
+                                if ( inputStr.back() == L's'|| inputStr.back() == L'n' ) {
+                                    for (int i = 0 ; i<3 ; i++) {
+                                        inputStr.pop_back();
+                                    }
+                                }
+                                else if (inputStr.back() == L'h') {
+                                    for (int i = 0 ; i<4 ; i++) {
+                                        inputStr.pop_back();
+                                    }                                    
+                                }
+                                else {
                                 inputStr.pop_back() ;
+                                }
                             }
                             else if (label == L"=") {
                                 //Solve function , takes the string as argument by ref and replace it by the solution 
@@ -66,6 +92,9 @@ int main() {
                     }
                 }
             }
+
+        cursor.setPosition(inputText.getPosition().x + inputText.getLocalBounds().width , inputText.getPosition().y + 5);
+
         }
 
         // Rendering
@@ -74,6 +103,10 @@ int main() {
         window.draw(inputText  /* + Cursor*/);
         for (auto& button : buttons)
             button.draw(window);
+
+        if (showCursor)
+            window.draw(cursor);
+
         window.display();
     }
 
