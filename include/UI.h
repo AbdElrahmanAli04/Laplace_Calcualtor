@@ -11,7 +11,7 @@ class Button {
     bool isPressed = false;
 
 
-    Button(const sf::Vector2f& size, const sf::Font& font, const std::string& label) {
+    Button(const sf::Vector2f& size, const sf::Font& font, const std::wstring& label) {
         shape.setSize(size);
         shape.setFillColor(sf::Color(200, 200, 200));
         shape.setOutlineColor(sf::Color::Black);
@@ -58,20 +58,17 @@ class Button {
 class UI {
 private:
 
-public:
+    void setupLabels(std::vector<std::wstring> &labels , std::vector<Button> &buttons , sf::Font &font ) {
+    
+    std::vector<std::wstring> Operators = {L" * ", L" + ", L" - ", L" / ", L"=", L"^", L"0", L"(", L")", L"del", L"C"};
 
-    void setup(std::vector<std::string> &labels , std::vector<Button> &buttons , sf::Font &font , sf::RectangleShape &inputBox , sf::Text &inputText ) {
-
-    std::vector<std::string> Operators = {"x", "+" , "-" , "/" , "del", "Sol", "0" , "(", ")"  };
-
-
-    //Setting the buttons and symbols
+    //Setting the Functions and symbols
 
     float btnWidth = 70, btnHeight = 50;
     float startX = 20, startY = 300;
-    int buttonsPerRow = 5;
+    int buttonsPerRow = 4;
 
-    for (size_t i = 0; i < labels.size(); ++i) {
+    for (int i = 0; i < labels.size(); ++i) {
         Button button({btnWidth, btnHeight}, font, labels[i]);
         float x = startX + (i % buttonsPerRow) * (btnWidth + 10);
         float y = startY + (i / buttonsPerRow) * (btnHeight + 10);
@@ -79,30 +76,33 @@ public:
         buttons.push_back(button);
         }
 
-        //Setting numbers 
+    //Setting numbers and operators
     btnWidth = 50;
     btnHeight = 50;
     startX = 500;
     startY = 300;
-    buttonsPerRow = 5;  // 5 buttons per row
+    buttonsPerRow = 5;  
     int number = 7;     // Starts at 7 (top-left)
     int opCounter = 0;  // Tracks operator index
 
-    for (int j = 0; j < 15; j++) {
-        int row = j / buttonsPerRow;  // Current row (0, 1, 2)
-        int col = j % buttonsPerRow;  // Current column (0-4)
+    for (int j = 0; j < Operators.size()+9; j++) {
+        int row = j / buttonsPerRow;  
+        int col = j % buttonsPerRow;  
 
         // Determine if this is a number or operator
-        std::string label;
-        if (col < 3) {
+        std::wstring label;
+
+        if (col < 3 && j < 15 ) {
             // Numbers: 7,8,9 → 4,5,6 → 1,2,3
-            label = std::to_string(number - (row * 3) + col);
-        } else {
-            // Operators: op1, op2, etc.
+            label = std::to_wstring(number - (row * 3) + col);
+        } 
+        
+        else {
+            // Operators:
             if (opCounter < Operators.size()) {
-                label = Operators[opCounter++];
+                label = (Operators[opCounter++]) ; 
             } else {
-                label = "?";  // Fallback if no more operators
+                label = L"?";  // Fallback if no more operators
             }
         }
 
@@ -113,21 +113,38 @@ public:
         button.setPosition(x, y);
         buttons.push_back(button);
 
-        
+    
+    }
+
+}
+
+    void setupInputBox(sf::RectangleShape &inputBox) {
+        inputBox.setPosition(20, 20);
+        inputBox.setFillColor(sf::Color::White);
+        inputBox.setOutlineColor(sf::Color::Black);
+        inputBox.setOutlineThickness(2);
+    }
+
+    void setupInputText( sf::Font &font  , sf::Text &inputText ) {
+        inputText.setFont(font);
+        inputText.setCharacterSize(24);
+        inputText.setFillColor(sf::Color::Black);
+        inputText.setPosition(30, 30);
+
     }
 
 
+public:
+
+    void setup(std::vector<std::wstring> &labels , std::vector<Button> &buttons , sf::Font &font , sf::RectangleShape &inputBox , sf::Text &inputText ) {
+
+    setupLabels(labels , buttons , font) ;
+
     //Setting the white box and the string written inside it
 
-    inputBox.setPosition(20, 20);
-    inputBox.setFillColor(sf::Color::White);
-    inputBox.setOutlineColor(sf::Color::Black);
-    inputBox.setOutlineThickness(2);
+    setupInputBox(inputBox) ;
+    setupInputText(font,inputText) ;
 
-    inputText.setFont(font);
-    inputText.setCharacterSize(24);
-    inputText.setFillColor(sf::Color::Black);
-    inputText.setPosition(30, 30);
 
 
 

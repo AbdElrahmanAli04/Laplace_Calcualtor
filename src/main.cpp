@@ -5,21 +5,22 @@
 
 
 int main() {
+
     sf::RenderWindow window(sf::VideoMode(800, 600), "Laplace Calculator");
     window.setFramerateLimit(60);
 
     sf::Font font;
-    if (!font.loadFromFile("../assets/NotoSansMath-Regular.ttf")) {
+    if (!font.loadFromFile("../assets/ARIAL.TTF")) {
         return -1;
     }
     
     // Making the Calc buttons
-    std::vector<std::string> labels = {"sin", "cos" , "tan" , "ln" , "e", "PI" , "t", "+", "-", "*", "/", "Clear" };
+    std::vector<std::wstring> labels = {L"sin", L"cos", L"sinh" , L"cosh" , L"e" , L"π", L"t"};
     std::vector<Button> buttons;
 
     sf::RectangleShape inputBox(sf::Vector2f(760, 50));
     sf::Text inputText;
-    std::string inputStr;
+    std::wstring inputStr;
 
 
     //Setting Up UI
@@ -45,9 +46,19 @@ int main() {
                     if (button.isPressed) {
                         button.release();
                         if (button.contains((sf::Vector2f)sf::Mouse::getPosition(window))) {
-                            std::string label = button.text.getString();
-                            if (label == "Clear")
+                            std::wstring label = button.text.getString();
+                            if (label == L"sin"|| label ==  L"cos" || label == L"sinh" || label == L"cosh" ) {
+                                inputStr += label + L"(" ;
+                                inputText.setString(inputStr);
+                            }
+                            else if (label == L"C")
                                 inputStr.clear();
+                            else if (label == L"del") {
+                                inputStr.pop_back() ;
+                            }
+                            else if (label == L"=") {
+                                //Solve function , takes the string as argument by ref and replace it by the solution 
+                            }
                             else
                                 inputStr += label;
                             inputText.setString(inputStr);
@@ -60,7 +71,7 @@ int main() {
         // Rendering
         window.clear(sf::Color(50, 50, 50));
         window.draw(inputBox);
-        window.draw(inputText);
+        window.draw(inputText  /* + Cursor*/);
         for (auto& button : buttons)
             button.draw(window);
         window.display();
