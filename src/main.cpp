@@ -9,12 +9,12 @@ int main() {
     window.setFramerateLimit(60);
 
     sf::Font font;
-    if (!font.loadFromFile("../assets/Asana-Math.ttf")) {
+    if (!font.loadFromFile("../assets/NotoSansMath-Regular.ttf")) {
         return -1;
     }
     
     // Making the Calc buttons
-    std::vector<std::string> labels = {"sin", "cos", "e", "Pi", "s", "t", "+", "-", "*", "/", "Clear" };
+    std::vector<std::string> labels = {"sin", "cos" , "tan" , "ln" , "e", "PI" , "t", "+", "-", "*", "/", "Clear" };
     std::vector<Button> buttons;
 
     sf::RectangleShape inputBox(sf::Vector2f(760, 50));
@@ -48,8 +48,6 @@ int main() {
                             std::string label = button.text.getString();
                             if (label == "Clear")
                                 inputStr.clear();
-                            else if (label == "π")
-                                inputStr += "3.1416";
                             else
                                 inputStr += label;
                             inputText.setString(inputStr);

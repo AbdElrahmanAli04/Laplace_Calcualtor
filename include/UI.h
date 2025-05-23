@@ -2,7 +2,6 @@
 #include <SFML/Graphics.hpp>
 #include <iostream>
 
-
 class Button {
 
     public :
@@ -63,10 +62,12 @@ public:
 
     void setup(std::vector<std::string> &labels , std::vector<Button> &buttons , sf::Font &font , sf::RectangleShape &inputBox , sf::Text &inputText ) {
 
+    std::vector<std::string> Operators = {"x", "+" , "-" , "/" , "del", "Sol", "0" , "(", ")"  };
+
 
     //Setting the buttons and symbols
 
-    float btnWidth = 100, btnHeight = 50;
+    float btnWidth = 70, btnHeight = 50;
     float startX = 20, startY = 300;
     int buttonsPerRow = 5;
 
@@ -76,7 +77,45 @@ public:
         float y = startY + (i / buttonsPerRow) * (btnHeight + 10);
         button.setPosition(x, y);
         buttons.push_back(button);
+        }
+
+        //Setting numbers 
+    btnWidth = 50;
+    btnHeight = 50;
+    startX = 500;
+    startY = 300;
+    buttonsPerRow = 5;  // 5 buttons per row
+    int number = 7;     // Starts at 7 (top-left)
+    int opCounter = 0;  // Tracks operator index
+
+    for (int j = 0; j < 15; j++) {
+        int row = j / buttonsPerRow;  // Current row (0, 1, 2)
+        int col = j % buttonsPerRow;  // Current column (0-4)
+
+        // Determine if this is a number or operator
+        std::string label;
+        if (col < 3) {
+            // Numbers: 7,8,9 → 4,5,6 → 1,2,3
+            label = std::to_string(number - (row * 3) + col);
+        } else {
+            // Operators: op1, op2, etc.
+            if (opCounter < Operators.size()) {
+                label = Operators[opCounter++];
+            } else {
+                label = "?";  // Fallback if no more operators
+            }
+        }
+
+        // Create and position the button
+        Button button({btnWidth, btnHeight}, font, label);
+        float x = startX + col * (btnWidth + 10);
+        float y = startY + row * (btnHeight + 10);
+        button.setPosition(x, y);
+        buttons.push_back(button);
+
+        
     }
+
 
     //Setting the white box and the string written inside it
 
