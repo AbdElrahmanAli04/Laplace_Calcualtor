@@ -87,7 +87,7 @@ private:
 
     void setupLabels(std::vector<std::wstring> &labels , std::vector<Button> &buttons , sf::Font &font ) {
     
-    std::vector<std::wstring> Operators = {L" * ", L" + ", L" - ", L" / ", L".", L"^", L"0", L"(", L")", L"del", L"C" , L"="};
+    std::vector<std::wstring> Operators = {L"*", L" + ", L" - ",  L"^"  , L"(", L")" , L"0" , L"." , L"del", L"C" , L"=" };
 
     //Setting the Functions and symbols
 

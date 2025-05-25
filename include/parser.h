@@ -5,13 +5,6 @@
 #include <vector>
 #include <stdexcept> // For exceptions
 
-// Define PI if not available (M_PI is common in <cmath> but not strictly standard C++)
-#ifndef M_PI
-#define M_PI 3.14159265358979323846
-#endif
-
-const double PI_CONSTANT = M_PI; // Declare here if needed in header, define in .cpp if only used there.
-
 // --- Tokenizer Types ---
 enum class TokenType {
     NUMBER, IDENTIFIER, PLUS, MINUS, MULTIPLY, DIVIDE, POWER, LPAREN, RPAREN, END_OF_INPUT, UNKNOWN,
@@ -44,11 +37,15 @@ enum class FunctionType {
     T_COS,
     EXP_SIN,
     EXP_COS,
-    T_SINH, 
-    T_COSH,    
-    EXP_SINH,  
+    T_SINH,
+    T_COSH,
+    EXP_SINH,
     EXP_COSH,
-    UNKNOWN_COMPOUND   
+    T_EXP_SIN,
+    T_EXP_COS,
+    T_EXP_SINH,
+    T_EXP_COSH,
+    UNKNOWN_COMPOUND
 };
 
 struct ParsedTerm {
@@ -56,9 +53,6 @@ struct ParsedTerm {
     FunctionType type = FunctionType::UNRECOGNIZED;
     std::vector<double> parameters; // For T_POW_N: {n}, EXP: {a}, SIN/COS: {omega}
     std::string original_term_str;
-
-    // // For debugging or easier interpretation
-    // std::string original_term_string; // Optional, useful for debugging
 
     std::string text_representation() const {
         switch (type) {
@@ -78,6 +72,10 @@ struct ParsedTerm {
             case FunctionType::T_COSH: return "t*cosh(" + std::to_string(parameters[0]) + "*t)";
             case FunctionType::EXP_SINH: return "exp(" + std::to_string(parameters[0]) + "*t)*sinh(" + std::to_string(parameters[1]) + "*t)";
             case FunctionType::EXP_COSH: return "exp(" + std::to_string(parameters[0]) + "*t)*cosh(" + std::to_string(parameters[1]) + "*t)";
+            case FunctionType::T_EXP_SIN: return "t*exp(" + std::to_string(parameters[0]) + "*t)*sin(" + std::to_string(parameters[1]) + "*t)";
+            case FunctionType::T_EXP_COS: return "t*exp(" + std::to_string(parameters[0]) + "*t)*cos(" + std::to_string(parameters[1]) + "*t)";
+            case FunctionType::T_EXP_SINH: return "t*exp(" + std::to_string(parameters[0]) + "*t)*sinh(" + std::to_string(parameters[1]) + "*t)";
+            case FunctionType::T_EXP_COSH: return "t*exp(" + std::to_string(parameters[0]) + "*t)*cosh(" + std::to_string(parameters[1]) + "*t)";
             default: return "unrecognized_function";
         }
     }
@@ -91,18 +89,15 @@ public:
 private:
     std::vector<Token> tokens_;
     size_t token_idx_;
-    std::vector<ParsedTerm> parsed_terms_;
+
     std::vector<ParsedTerm> parse_expression_in_parentheses_helper();
 
     Token& current_token();
     Token& peek_token(size_t offset = 1);
     void consume_token();
-    // double evaluate_simple_parameter();
-    // void parse_term_with_coeff(double overall_sign);
     double evaluate_simple_parameter_argument();
     ParsedTerm parse_factor();
     ParsedTerm parse_multiplication(); // Handles terms connected by * or / (higher precedence)
-    ParsedTerm combine_multiplied_terms(const ParsedTerm& term1, const ParsedTerm& term2);
 };
 
 #endif // PARSER_H

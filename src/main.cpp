@@ -2,9 +2,6 @@
 #include <vector>
 #include <string>
 #include "../include/UI.h" 
-#include "../include/parser.h" 
-#include "../include/laplace_transforms.h" 
-
 #include "Solve.cpp"
 
 
@@ -71,7 +68,7 @@ int main() {
                         button.release();
                         if (button.contains((sf::Vector2f)sf::Mouse::getPosition(window))) {
                             std::wstring label = button.text.getString();
-                            if (label == L"sin"|| label ==  L"cos" || label == L"sinh" || label == L"cosh" || label == L"^"   ) {
+                            if (label == L"sin"|| label ==  L"cos" || label == L"sinh" || label == L"cosh" || label == L"^"  ) {
                                 inputStr += label + L"(" ;
                                 inputText.setString(inputStr);
                             }
