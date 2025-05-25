@@ -230,7 +230,7 @@ std::string transform_t_cos(double omega, double coeff ) {
 /**
  * @brief L{coeff * e^(at) * sin(omega*t)} = coeff * omega / ((s-a)^2 + omega^2)
  */
-std::string transform_exp_sin(double a, double omega, double coeff ) {
+std::string transform_exp_sin(double a, double omega, double coeff  ) {
     if (coeff == 0.0) return "0";
     if (omega == 0.0) return "0"; // e^(at)*sin(0) = 0
     

@@ -33,6 +33,14 @@ class Solve {
                 ParsedTerm term = terms[i];
                 std::string term_laplace_str;
 
+std::cout << "DEBUG: Term " << i << ": Coeff=" << term.coefficient
+                  << ", Type=" << static_cast<int>(term.type)
+                  << ", Params={";
+        for (double p : term.parameters) {
+            std::cout << p << ", ";
+        }
+        std::cout << "}" << std::endl;
+
                 switch (term.type) {
                     case FunctionType::CONSTANT:
                         term_laplace_str = Laplace::transform_constant(term.coefficient);
@@ -77,11 +85,11 @@ class Solve {
                         break;
                     case FunctionType::EXP_SIN:
                         if (term.parameters.size() < 2) throw std::runtime_error("Missing 'a' or 'omega' for exp*sin");
-                        term_laplace_str = Laplace::transform_exp_sin(term.parameters[0], term.parameters[2], term.coefficient);
+                        term_laplace_str = Laplace::transform_exp_sin(term.parameters[0], term.parameters[1], term.coefficient);
                         break;
                     case FunctionType::EXP_COS:
                         if (term.parameters.size() < 2) throw std::runtime_error("Missing 'a' or 'omega' for exp*cos");
-                        term_laplace_str = Laplace::transform_exp_cos(term.parameters[0], term.parameters[2], term.coefficient);
+                        term_laplace_str = Laplace::transform_exp_cos(term.parameters[0], term.parameters[1], term.coefficient);
                         break;
                     // Compound Hyperbolic Functions
                     case FunctionType::T_SINH:
@@ -94,11 +102,11 @@ class Solve {
                         break;
                     case FunctionType::EXP_SINH:
                         if (term.parameters.size() < 2) throw std::runtime_error("Missing 'a' or 'omega' for exp*sinh");
-                        term_laplace_str = Laplace::transform_exp_sinh(term.parameters[0], term.parameters[2], term.coefficient);
+                        term_laplace_str = Laplace::transform_exp_sinh(term.parameters[0], term.parameters[1], term.coefficient);
                         break;
                     case FunctionType::EXP_COSH:
                         if (term.parameters.size() < 2) throw std::runtime_error("Missing 'a' or 'omega' for exp*cosh");
-                        term_laplace_str = Laplace::transform_exp_cosh(term.parameters[0], term.parameters[2], term.coefficient);
+                        term_laplace_str = Laplace::transform_exp_cosh(term.parameters[0], term.parameters[1], term.coefficient);
                         break;
 
                     case FunctionType::UNRECOGNIZED:
