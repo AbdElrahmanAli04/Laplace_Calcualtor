@@ -47,6 +47,12 @@ int main() {
 
     while (window.isOpen()) {
         sf::Event event;
+
+        if (clock.getElapsedTime().asSeconds() >= cursor.getBlinkRate()) {
+            cursor.ReverseState();
+            clock.restart();
+        }
+
         while (window.pollEvent(event)) {
             if (event.type == sf::Event::Closed)
                 window.close();
@@ -58,12 +64,6 @@ int main() {
                     }
                 }
             }
-
-            if (clock.getElapsedTime().asSeconds() >= cursor.getBlinkRate()) {
-                cursor.ReverseState();
-                clock.restart();
-            }
-
 
             if (event.type == sf::Event::MouseButtonReleased) {
                 for (auto& button : buttons) {
@@ -107,7 +107,7 @@ int main() {
                 }
             }
 
-        cursor.setPosition(inputText.getPosition().x + inputText.getLocalBounds().width , inputText.getPosition().y + 5);
+        cursor.setPosition(inputText.getPosition().x + inputText.getLocalBounds().width + 5 , inputText.getPosition().y + 4);
 
         }
 

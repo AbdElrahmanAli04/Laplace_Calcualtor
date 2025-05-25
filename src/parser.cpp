@@ -36,7 +36,7 @@ std::vector<Token> tokenize(const std::string& input) {
         }
 
         // Handle numbers: allows for leading '.', e.g., ".5"
-        if (std::isdigit(current_char) || (current_char == '.' && pos + 1 < input.length() && std::isdigit(input[pos+1]))) {
+        if (std::isdigit(current_char) || ( (current_char == '.')  && pos + 1 < input.length() && std::isdigit(input[pos+1]))) { // Check for leading digit or decimal point
             std::string num_str;
             bool decimal_found = false;
             while (pos < input.length() && (std::isdigit(input[pos]) || input[pos] == '.')) {
@@ -112,48 +112,6 @@ void Parser::consume_token() {
     }
 }
 
-// Helper to evaluate simple parameter expressions like "2", "PI", "-2", "2*PI"
-// This is primarily for the *coefficient* of a standalone constant,
-// or for very simple arguments like 'a' in exp(a*t) or 'omega' in sin(omega*t)
-// It assumes parameters are constants or PI. 't' is handled explicitly in argument parsing.
-double Parser::evaluate_simple_parameter() {
-    double val = 1.0;
-    double sign = 1.0;
-
-    if (current_token().type == TokenType::MINUS) {
-        sign = -1.0;
-        consume_token();
-    } else if (current_token().type == TokenType::PLUS) {
-        consume_token();
-    }
-
-    if (current_token().type == TokenType::NUMBER) {
-        val = current_token().value;
-        consume_token();
-    } else if (current_token().text == "PI") {
-        val = PI_CONSTANT;
-        consume_token();
-    } else {
-        throw std::runtime_error("Expected number or PI for parameter value, got: " + current_token().text);
-    }
-
-    val *= sign;
-
-    // Handle simple multiplication like "2*PI" or "PI*2" (though usually written 2*PI)
-    if (current_token().type == TokenType::MULTIPLY) {
-        consume_token(); // Consume '*'
-        if (current_token().text == "PI") {
-            val *= PI_CONSTANT;
-            consume_token();
-        } else if (current_token().type == TokenType::NUMBER) {
-            val *= current_token().value;
-            consume_token();
-        } else {
-            throw std::runtime_error("Expected PI or number after '*' in parameter, got: " + current_token().text);
-        }
-    }
-    return val;
-}
 
 // Helper to parse arguments like "a*t", "omega*t", "a", "omega"
 // Returns the constant factor 'a' or 'omega'. Assumes 't' is the variable.
@@ -234,209 +192,338 @@ double Parser::evaluate_simple_parameter_argument() {
 }
 
 
-// Tries to parse a single term which might have a coefficient
-// Helper function (private member of Parser class) to parse a single simple function (t, sin, cos, exp)
-// and return a temporary ParsedTerm for it. This makes the main parse_term_with_coeff cleaner.
-// This function should be placed inside the Parser class definition in .h or just before its usage in .cpp
-// We'll define it as a private helper function of Parser.
-ParsedTerm Parser::parse_single_function_factor() {
-    ParsedTerm temp_factor;
-    temp_factor.coefficient = 1.0; // Factors initially have coeff 1, main coeff applied later.
 
-    if (current_token().text == "t") {
-        consume_token(); // Consume "t"
-        temp_factor.type = FunctionType::T_POW_N;
-        if (current_token().type == TokenType::POWER) {
-            consume_token(); // Consume '^'
-            if (current_token().type == TokenType::NUMBER) {
-                temp_factor.parameters.push_back(current_token().value); // n
-                consume_token();
-            } else {
-                throw std::runtime_error("Expected exponent (number) after '^' for t^n.");
-            }
-        } else {
-            temp_factor.parameters.push_back(1.0); // Default to t^1 if no power specified
-        }
-    } else if (current_token().text == "sin") {
-        consume_token(); // Consume "sin"
-        temp_factor.type = FunctionType::SIN;
-        if (current_token().type != TokenType::LPAREN) throw std::runtime_error("Expected '(' after sin.");
-        consume_token(); // Consume '('
-        temp_factor.parameters.push_back(evaluate_simple_parameter_argument()); // Parse omega
-        if (current_token().type != TokenType::RPAREN) throw std::runtime_error("Expected ')' after sin argument.");
-        consume_token(); // Consume ')'
-    } else if (current_token().text == "cos") {
-        consume_token(); // Consume "cos"
-        temp_factor.type = FunctionType::COS;
-        if (current_token().type != TokenType::LPAREN) throw std::runtime_error("Expected '(' after cos.");
-        consume_token(); // Consume '('
-        temp_factor.parameters.push_back(evaluate_simple_parameter_argument()); // Parse omega
-        if (current_token().type != TokenType::RPAREN) throw std::runtime_error("Expected ')' after cos argument.");
-        consume_token(); // Consume ')'
-    } else if (current_token().text == "exp" || current_token().text == "e") {
-        std::string func_name = current_token().text;
-        consume_token(); // Consume "exp" or "e"
-        temp_factor.type = FunctionType::EXP;
-        if (func_name == "e" && current_token().type == TokenType::POWER) { // For "e^(expr)"
-            consume_token(); // Consume '^'
-        }
-        if (current_token().type != TokenType::LPAREN) throw std::runtime_error("Expected '(' after " + func_name + (func_name == "e" ? "^" : "") + ".");
-        consume_token(); // Consume '('
-        temp_factor.parameters.push_back(evaluate_simple_parameter_argument()); // Parse 'a'
-        if (current_token().type != TokenType::RPAREN) throw std::runtime_error("Expected ')' after exp/e argument.");
-        consume_token(); // Consume ')'
-    }else if (current_token().text == "sinh") { // NEW: Handle sinh
-        consume_token(); // Consume "sinh"
-        temp_factor.type = FunctionType::SINH;
-        if (current_token().type != TokenType::LPAREN) throw std::runtime_error("Expected '(' after sinh.");
-        consume_token(); // Consume '('
-        temp_factor.parameters.push_back(evaluate_simple_parameter_argument()); // Parse omega
-        if (current_token().type != TokenType::RPAREN) throw std::runtime_error("Expected ')' after sinh argument.");
-        consume_token(); // Consume ')'
-    } else if (current_token().text == "cosh") { // NEW: Handle cosh
-        consume_token(); // Consume "cosh"
-        temp_factor.type = FunctionType::COSH;
-        if (current_token().type != TokenType::LPAREN) throw std::runtime_error("Expected '(' after cosh.");
-        consume_token(); // Consume '('
-        temp_factor.parameters.push_back(evaluate_simple_parameter_argument()); // Parse omega
-        if (current_token().type != TokenType::RPAREN) throw std::runtime_error("Expected ')' after cosh argument.");
-        consume_token(); // Consume ')'
-    } else {
-        throw std::runtime_error("Expected a function (t, sin, cos, exp, sinh, cosh) but got: " + current_token().text);
-    }
-    return temp_factor;
-}
+// Parses the smallest unit: a number, a variable 't', a function call, or a parenthesized expression.
+ParsedTerm Parser::parse_factor() {
+    ParsedTerm term;
+    term.coefficient = 1.0; // Factors initially have coeff 1.0
 
-
-// REMOVE THE OLD parse_term_with_coeff AND REPLACE IT WITH THIS NEW ONE
-void Parser::parse_term_with_coeff(double overall_sign) {
-    ParsedTerm final_term;
-    double current_coeff = overall_sign; // Start with the sign determined by '+' or '-'
-
-    // Handle explicit leading coefficient (e.g., "3*sin(t)", "5")
-    if (current_token().type == TokenType::NUMBER) {
-        current_coeff *= current_token().value;
+    // Handle potential leading sign for a factor itself, e.g., "-(t)" or "-(sin(t))"
+    // This is distinct from the overall_sign for addition/subtraction.
+    // A more robust parser would handle unary minus here and pass it down.
+    // For now, let's assume `evaluate_simple_parameter_argument` handles signs within arguments,
+    // and overall term sign is handled by `parse_expression`.
+    // If you want to handle "-(t)" as a factor, uncomment and modify this:
+    /*
+    double factor_sign = 1.0;
+    if (current_token().type == TokenType::MINUS) {
+        factor_sign = -1.0;
+        term.original_term_str += current_token().text;
         consume_token();
-        if (current_token().type != TokenType::MULTIPLY) {
-            // It's a standalone constant term (e.g., "5", "-3")
-            final_term.type = FunctionType::CONSTANT;
-            final_term.coefficient = current_coeff;
-            parsed_terms_.push_back(final_term);
-            return;
-        }
-        consume_token(); // Consume '*'
+    } else if (current_token().type == TokenType::PLUS) {
+        term.original_term_str += current_token().text;
+        consume_token();
     }
-    final_term.coefficient = current_coeff; // Apply the parsed coefficient to the final term
+    term.coefficient *= factor_sign;
+    */
 
-    // Parse the first function/factor
-    ParsedTerm first_factor = parse_single_function_factor();
-    final_term.type = first_factor.type;
-    final_term.parameters = first_factor.parameters;
+    // Handle numbers or constants like 'PI'
+    if (current_token().type == TokenType::NUMBER) {
+        term.type = FunctionType::CONSTANT;
+        term.coefficient *= current_token().value; // Apply explicit coefficient
+        term.original_term_str += current_token().text;
+        consume_token();
+        return term;
+    } else if (current_token().type == TokenType::IDENTIFIER && current_token().text == "PI") {
+        term.type = FunctionType::CONSTANT;
+        term.coefficient *= PI_CONSTANT;
+        term.original_term_str += current_token().text;
+        consume_token();
+        return term;
+    } else if (current_token().type == TokenType::IDENTIFIER && current_token().text == "t") {
+        term.type = FunctionType::T_POW_N;
+        term.parameters.push_back(1.0); // Default to t^1
+        term.original_term_str += current_token().text;
+        consume_token();
+        if (current_token().type == TokenType::POWER) { // Handle t^n
+            term.original_term_str += current_token().text; // Add '^'
+            consume_token(); // Consume '^'
+            if (current_token().type != TokenType::NUMBER) {
+                throw std::runtime_error("Expected number for exponent after 't^', got: " + current_token().text);
+            }
+            term.parameters[0] = current_token().value; // Update power 'n'
+            term.original_term_str += current_token().text; // Add 'n'
+            consume_token();
+        }
+        return term;
+    } else if (current_token().type == TokenType::IDENTIFIER) {
+        // It's a function name: sin, cos, exp, sinh, cosh
+        std::string func_name = current_token().text;
+        term.original_term_str += current_token().text;
+        consume_token(); // Consume function name
 
-    // Check for multiplication with another function/factor
-    if (current_token().type == TokenType::MULTIPLY) {
-        consume_token(); // Consume '*'
-
-        // Parse the second function/factor
-        ParsedTerm second_factor = parse_single_function_factor();
-
-        // Now, combine first_factor and second_factor into a single compound function
-        // Check for (t * exp), (t * sin), (t * cos)
-        // Check for (t * exp), (t * sin), (t * cos), (t * sinh), (t * cosh)
-        if (first_factor.type == FunctionType::T_POW_N && first_factor.parameters[0] == 1.0) { // Check if it's 't' (t^1)
-            if (second_factor.type == FunctionType::EXP) {
-                final_term.type = FunctionType::T_EXP;
-                final_term.parameters = second_factor.parameters; // 'a' from exp(at)
-            } else if (second_factor.type == FunctionType::SIN) {
-                final_term.type = FunctionType::T_SIN;
-                final_term.parameters = second_factor.parameters; // 'omega' from sin(omega*t)
-            } else if (second_factor.type == FunctionType::COS) {
-                final_term.type = FunctionType::T_COS;
-                final_term.parameters = second_factor.parameters; // 'omega' from cos(omega*t)
-            } else if (second_factor.type == FunctionType::SINH) { // NEW: t * sinh
-                final_term.type = FunctionType::T_SINH;
-                final_term.parameters = second_factor.parameters; // 'omega' from sinh(omega*t)
-            } else if (second_factor.type == FunctionType::COSH) { // NEW: t * cosh
-                final_term.type = FunctionType::T_COSH;
-                final_term.parameters = second_factor.parameters; // 'omega' from cosh(omega*t)
+        if (func_name == "e") { // Special handling for 'e' followed by '^' for exp(at)
+            if (current_token().type == TokenType::POWER) {
+                term.original_term_str += current_token().text; // Add '^'
+                consume_token(); // Consume '^'
             } else {
-                throw std::runtime_error("Unsupported multiplication of 't' with " + second_factor.text_representation());
+                // 'e' without '^' or '(', treat as a constant, if it's not a function.
+                // For now, assume 'e' implies 'exp' if followed by '(', otherwise error or constant.
+                // If you want 'e' as a constant, similar to 'PI', handle it here:
+                // term.type = FunctionType::CONSTANT;
+                // term.coefficient *= std::exp(1.0); // Mathematical constant e
+                // return term;
+                throw std::runtime_error("Identifier 'e' must be followed by '^' for exponentiation or '(' for exp() function: " + current_token().text);
             }
         }
-        // Check for (exp * sin), (exp * cos), (exp * sinh), (exp * cosh)
-        else if (first_factor.type == FunctionType::EXP) {
-            if (second_factor.type == FunctionType::SIN) {
-                final_term.type = FunctionType::EXP_SIN;
-                final_term.parameters.push_back(first_factor.parameters[0]);  // 'a' from exp(at)
-                final_term.parameters.push_back(second_factor.parameters[0]); // 'omega' from sin(omega*t)
-            } else if (second_factor.type == FunctionType::COS) {
-                final_term.type = FunctionType::EXP_COS;
-                final_term.parameters.push_back(first_factor.parameters[0]);  // 'a' from exp(at)
-                final_term.parameters.push_back(second_factor.parameters[0]); // 'omega' from cos(omega*t)
-            } else if (second_factor.type == FunctionType::SINH) { // NEW: exp * sinh
-                final_term.type = FunctionType::EXP_SINH;
-                final_term.parameters.push_back(first_factor.parameters[0]);  // 'a' from exp(at)
-                final_term.parameters.push_back(second_factor.parameters[0]); // 'omega' from sinh(omega*t)
-            } else if (second_factor.type == FunctionType::COSH) { // NEW: exp * cosh
-                final_term.type = FunctionType::EXP_COSH;
-                final_term.parameters.push_back(first_factor.parameters[0]);  // 'a' from exp(at)
-                final_term.parameters.push_back(second_factor.parameters[0]); // 'omega' from cosh(omega*t)
-            } else {
-                throw std::runtime_error("Unsupported multiplication of exp(at) with " + second_factor.text_representation());
-            }
-        }
-        
-        // Handle cases like "t^2 * cos(...)"
-        else if (first_factor.type == FunctionType::T_POW_N && first_factor.parameters[0] > 1.0) {
-            // For now, we'll keep this as an error for simplicity.
-            // Supporting L{t^n * f(t)} requires a different Laplace transform rule or a more advanced parser.
-            // If you implement L{t^n * f(t)} = (-1)^n * d^n/ds^n F(s), you'd need the parser to just
-            // give you f(t) and n, then main.cpp would call L{f(t)} and differentiate.
-            throw std::runtime_error("Multiplication with t^n (n>1) is not directly supported: " + first_factor.text_representation() + " * " + second_factor.text_representation());
-        }
-        else {
-            throw std::runtime_error("Unsupported multiplication of functions: " + first_factor.text_representation() + " * " + second_factor.text_representation());
-        }
-    }
 
-    parsed_terms_.push_back(final_term); // Add the parsed term (simple or compound)
+        if (current_token().type != TokenType::LPAREN) {
+            throw std::runtime_error("Expected '(' after function name " + func_name + ", got: " + current_token().text);
+        }
+        term.original_term_str += current_token().text; // Add '('
+        consume_token(); // Consume '('
+
+        // Parse argument (e.g., 2*t, -3*t, t, PI*t)
+        double param_val = evaluate_simple_parameter_argument();
+        term.parameters.push_back(param_val);
+        // original_term_str for parameter part is built inside evaluate_simple_parameter_argument if needed
+
+        if (current_token().type != TokenType::RPAREN) {
+            throw std::runtime_error("Expected ')' after function arguments, got: " + current_token().text);
+        }
+        term.original_term_str += current_token().text; // Add ')'
+        consume_token(); // Consume ')'
+
+        if (func_name == "sin") {
+            term.type = FunctionType::SIN;
+        } else if (func_name == "cos") {
+            term.type = FunctionType::COS;
+        } else if (func_name == "exp" || func_name == "e") { // 'e' handled as exp
+            term.type = FunctionType::EXP;
+        } else if (func_name == "sinh") {
+            term.type = FunctionType::SINH;
+        } else if (func_name == "cosh") {
+            term.type = FunctionType::COSH;
+        } else {
+            throw std::runtime_error("Unrecognized function name: " + func_name);
+        }
+        return term;
+    } else if (current_token().type == TokenType::LPAREN) {
+        term.original_term_str += current_token().text; // Add '('
+        consume_token(); // Consume '('
+        // Recursively parse the entire sub-expression within parentheses
+        // This is a simpler version; if you need full expression parsing inside parens,
+        // you'd call parse_expression or a similar top-level rule here.
+        // For now, we assume simple terms inside like (5*sin(t))
+        std::vector<ParsedTerm> sub_terms = parse_expression_in_parentheses_helper(); // Call helper for recursive parsing
+        if (sub_terms.size() != 1) {
+            throw std::runtime_error("Parenthesized expressions currently only support a single combined term for Laplace transform purposes.");
+        }
+        term = sub_terms[0]; // Take the result of the sub-expression as the factor
+
+        if (current_token().type != TokenType::RPAREN) {
+            throw std::runtime_error("Expected ')' after parenthesized expression, got: " + current_token().text);
+        }
+        term.original_term_str += current_token().text; // Add ')'
+        consume_token(); // Consume ')'
+        return term;
+    } else {
+        throw std::runtime_error("Unexpected token while parsing factor: " + current_token().text);
+    }
 }
 
-// Add this new helper function's declaration to Parser class in parser.h (as a private member)
-// Add this definition (ParsedTerm Parser::parse_single_function_factor()) to parser.cpp
-// just before the updated Parser::parse_term_with_coeff.
 
+// Implementation of combine_multiplied_terms
+// Make sure this is part of the Parser class (i.e., Parser:: prefix)
+ParsedTerm Parser::combine_multiplied_terms(const ParsedTerm& term1, const ParsedTerm& term2) {
+    ParsedTerm combined_term;
+    combined_term.coefficient = term1.coefficient * term2.coefficient;
+    combined_term.original_term_str = "(" + term1.original_term_str + "*" + term2.original_term_str + ")";
+
+    // Case 1: exp(at) * sin(omega t) or sin(omega t) * exp(at)
+    if ((term1.type == FunctionType::EXP && term2.type == FunctionType::SIN) ||
+        (term1.type == FunctionType::SIN && term2.type == FunctionType::EXP)) {
+        if (term1.type == FunctionType::EXP) {
+            combined_term.type = FunctionType::EXP_SIN;
+            combined_term.parameters.push_back(term1.parameters[0]); // 'a' from exp
+            combined_term.parameters.push_back(term2.parameters[0]); // 'omega' from sin
+        } else { // term1 is SIN
+            combined_term.type = FunctionType::EXP_SIN;
+            combined_term.parameters.push_back(term2.parameters[0]); // 'a' from exp
+            combined_term.parameters.push_back(term1.parameters[0]); // 'omega' from sin
+        }
+    }
+    // Case 2: exp(at) * cos(omega t) or cos(omega t) * exp(at)
+    else if ((term1.type == FunctionType::EXP && term2.type == FunctionType::COS) ||
+             (term1.type == FunctionType::COS && term2.type == FunctionType::EXP)) {
+        if (term1.type == FunctionType::EXP) {
+            combined_term.type = FunctionType::EXP_COS;
+            combined_term.parameters.push_back(term1.parameters[0]); // 'a' from exp
+            combined_term.parameters.push_back(term2.parameters[0]); // 'omega' from cos
+        } else { // term1 is COS
+            combined_term.type = FunctionType::EXP_COS;
+            combined_term.parameters.push_back(term2.parameters[0]); // 'a' from exp
+            combined_term.parameters.push_back(term1.parameters[0]); // 'omega' from cos
+        }
+    }
+    // Case 3: exp(at) * sinh(omega t) or sinh(omega t) * exp(at)
+    else if ((term1.type == FunctionType::EXP && term2.type == FunctionType::SINH) ||
+             (term1.type == FunctionType::SINH && term2.type == FunctionType::EXP)) {
+        if (term1.type == FunctionType::EXP) {
+            combined_term.type = FunctionType::EXP_SINH;
+            combined_term.parameters.push_back(term1.parameters[0]); // 'a' from exp
+            combined_term.parameters.push_back(term2.parameters[0]); // 'omega' from sinh
+        } else { // term1 is SINH
+            combined_term.type = FunctionType::EXP_SINH;
+            combined_term.parameters.push_back(term2.parameters[0]); // 'a' from exp
+            combined_term.parameters.push_back(term1.parameters[0]); // 'omega' from sinh
+        }
+    }
+    // Case 4: exp(at) * cosh(omega t) or cosh(omega t) * exp(at)
+    else if ((term1.type == FunctionType::EXP && term2.type == FunctionType::COSH) ||
+             (term1.type == FunctionType::COSH && term2.type == FunctionType::EXP)) {
+        if (term1.type == FunctionType::EXP) {
+            combined_term.type = FunctionType::EXP_COSH;
+            combined_term.parameters.push_back(term1.parameters[0]); // 'a' from exp
+            combined_term.parameters.push_back(term2.parameters[0]); // 'omega' from cosh
+        } else { // term1 is COSH
+            combined_term.type = FunctionType::EXP_COSH;
+            combined_term.parameters.push_back(term2.parameters[0]); // 'a' from exp
+            combined_term.parameters.push_back(term1.parameters[0]); // 'omega' from cosh
+        }
+    }
+    // Case 5: t * sin(omega t) or sin(omega t) * t
+    else if ((term1.type == FunctionType::T_POW_N && term1.parameters[0] == 1.0 && term2.type == FunctionType::SIN) ||
+             (term1.type == FunctionType::SIN && term2.type == FunctionType::T_POW_N && term2.parameters[0] == 1.0)) {
+        combined_term.type = FunctionType::T_SIN;
+        combined_term.parameters.push_back((term1.type == FunctionType::SIN) ? term1.parameters[0] : term2.parameters[0]);
+    }
+    // Case 6: t * cos(omega t) or cos(omega t) * t
+    else if ((term1.type == FunctionType::T_POW_N && term1.parameters[0] == 1.0 && term2.type == FunctionType::COS) ||
+             (term1.type == FunctionType::COS && term2.type == FunctionType::T_POW_N && term2.parameters[0] == 1.0)) {
+        combined_term.type = FunctionType::T_COS;
+        combined_term.parameters.push_back((term1.type == FunctionType::COS) ? term1.parameters[0] : term2.parameters[0]);
+    }
+    // Case 7: t * sinh(omega t) or sinh(omega t) * t
+    else if ((term1.type == FunctionType::T_POW_N && term1.parameters[0] == 1.0 && term2.type == FunctionType::SINH) ||
+             (term1.type == FunctionType::SINH && term2.type == FunctionType::T_POW_N && term2.parameters[0] == 1.0)) {
+        combined_term.type = FunctionType::T_SINH;
+        combined_term.parameters.push_back((term1.type == FunctionType::SINH) ? term1.parameters[0] : term2.parameters[0]);
+    }
+    // Case 8: t * cosh(omega t) or cosh(omega t) * t
+    else if ((term1.type == FunctionType::T_POW_N && term1.parameters[0] == 1.0 && term2.type == FunctionType::COSH) ||
+             (term1.type == FunctionType::COSH && term2.type == FunctionType::T_POW_N && term2.parameters[0] == 1.0)) {
+        combined_term.type = FunctionType::T_COSH;
+        combined_term.parameters.push_back((term1.type == FunctionType::COSH) ? term1.parameters[0] : term2.parameters[0]);
+    }
+    // Case 9: t * exp(at) or exp(at) * t
+    else if ((term1.type == FunctionType::T_POW_N && term1.parameters[0] == 1.0 && term2.type == FunctionType::EXP) ||
+             (term1.type == FunctionType::EXP && term2.type == FunctionType::T_POW_N && term2.parameters[0] == 1.0)) {
+        combined_term.type = FunctionType::T_EXP;
+        combined_term.parameters.push_back((term1.type == FunctionType::EXP) ? term1.parameters[0] : term2.parameters[0]);
+    }
+    // If we multiply a known function by a constant, it's still the same function type
+    // e.g., (2) * sin(t) is still SIN, coefficient just gets multiplied
+    else if (term1.type == FunctionType::CONSTANT) {
+        combined_term.type = term2.type;
+        combined_term.parameters = term2.parameters;
+    } else if (term2.type == FunctionType::CONSTANT) {
+        combined_term.type = term1.type;
+        combined_term.parameters = term1.parameters;
+    }
+    else {
+        // Fallback: If not a recognized combined form, treat as UNRECOGNIZED or throw
+        combined_term.type = FunctionType::UNRECOGNIZED;
+        throw std::runtime_error("Unsupported multiplication of functions: " + term1.original_term_str + " * " + term2.original_term_str);
+    }
+
+    return combined_term;
+}
+
+// Parses terms with multiplication and division precedence
+ParsedTerm Parser::parse_multiplication() {
+    ParsedTerm left_factor = parse_factor(); // Get the first factor
+
+    while (current_token().type == TokenType::MULTIPLY || current_token().type == TokenType::DIVIDE) {
+        TokenType op_type = current_token().type;
+        consume_token(); // Consume '*' or '/'
+
+        ParsedTerm right_factor = parse_factor(); // Get the next factor
+
+        if (op_type == TokenType::MULTIPLY) {
+            left_factor = combine_multiplied_terms(left_factor, right_factor);
+        } else { // TokenType::DIVIDE
+            // Handle division if you need to. For Laplace, division is less common directly.
+            // You could represent it as multiplication by 1/something if 'something' is a constant.
+            // For now, throw an error for unsupported division.
+            throw std::runtime_error("Division is not supported for Laplace Transform combinations.");
+        }
+    }
+    return left_factor;
+}
+
+
+// Helper function to parse an expression that is expected to be within parentheses.
+// It's like a mini-parse_expression, but it expects to find ')' at the end.
+std::vector<ParsedTerm> Parser::Parser::parse_expression_in_parentheses_helper() {
+    std::vector<ParsedTerm> terms_in_paren;
+    double overall_sign_for_term = 1.0;
+
+    // Handle initial sign inside parentheses, e.g. (-sin(t))
+    if (current_token().type == TokenType::MINUS) {
+        overall_sign_for_term = -1.0;
+        consume_token();
+    } else if (current_token().type == TokenType::PLUS) {
+        consume_token();
+    }
+
+    // Parse the first term within parentheses
+    ParsedTerm current_parsed_term = parse_multiplication();
+    current_parsed_term.coefficient *= overall_sign_for_term;
+    terms_in_paren.push_back(current_parsed_term);
+
+    // Continue parsing subsequent terms connected by + or - until RPAREN or END_OF_INPUT
+    while (current_token().type == TokenType::PLUS || current_token().type == TokenType::MINUS) {
+        overall_sign_for_term = (current_token().type == TokenType::PLUS) ? 1.0 : -1.0;
+        consume_token(); // Consume '+' or '-'
+
+        // Parse the next additive term
+        current_parsed_term = parse_multiplication();
+        current_parsed_term.coefficient *= overall_sign_for_term;
+        terms_in_paren.push_back(current_parsed_term);
+    }
+    // The calling `parse_factor` will consume the RPAREN.
+    return terms_in_paren;
+}
 
 std::vector<ParsedTerm> Parser::parse_expression(const std::string& input) {
-    tokens_ = tokenize(input); // Tokenize the input string
-    token_idx_ = 0;             // Reset token index for new parse
-    parsed_terms_.clear();      // Clear any previous parsed terms
+    tokens_ = tokenize(input); // Call the external tokenize function
+    token_idx_ = 0; // Reset token index
+    // parsed_terms_.clear(); // No longer needed as we return directly
 
-    if (tokens_.empty() || tokens_[0].type == TokenType::END_OF_INPUT) {
-        return parsed_terms_; // Empty input, return empty list
+    std::vector<ParsedTerm> result_terms; // Local vector to hold results
+
+    if (tokens_.empty() || current_token().type == TokenType::END_OF_INPUT) {
+        return result_terms; // Empty input, return empty list
     }
 
-    // Handle leading sign for the first term (e.g., "-t^2 + 5")
-    double overall_sign = 1.0;
-    if (current_token().type == TokenType::PLUS) {
+    // Handle leading sign for the first term
+    double overall_sign_for_term = 1.0;
+    if (current_token().type == TokenType::MINUS) {
+        overall_sign_for_term = -1.0;
         consume_token();
-    } else if (current_token().type == TokenType::MINUS) {
-        overall_sign = -1.0;
+    } else if (current_token().type == TokenType::PLUS) {
         consume_token();
     }
 
-    parse_term_with_coeff(overall_sign); // Parse the first term
+    // Parse the first additive term (which can contain multiplications)
+    ParsedTerm current_parsed_term = parse_multiplication(); // Use the new function
+    current_parsed_term.coefficient *= overall_sign_for_term;
+    result_terms.push_back(current_parsed_term);
 
-    // Loop to parse subsequent terms separated by '+' or '-'
+    // Continue parsing subsequent additive terms connected by + or -
     while (current_token().type == TokenType::PLUS || current_token().type == TokenType::MINUS) {
-        overall_sign = (current_token().type == TokenType::PLUS) ? 1.0 : -1.0;
-        consume_token(); // Consume PLUS or MINUS operator
-        parse_term_with_coeff(overall_sign); // Parse the next term
+        overall_sign_for_term = (current_token().type == TokenType::PLUS) ? 1.0 : -1.0;
+        consume_token(); // Consume '+' or '-'
+
+        // Parse the next additive term
+        current_parsed_term = parse_multiplication(); // Use the new function
+        current_parsed_term.coefficient *= overall_sign_for_term;
+        result_terms.push_back(current_parsed_term);
     }
 
-    // After parsing all terms, ensure we are at the end of input
     if (current_token().type != TokenType::END_OF_INPUT) {
         throw std::runtime_error("Unexpected token at end of expression: " + current_token().text);
     }
-    return parsed_terms_;
+    return result_terms;
 }

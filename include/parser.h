@@ -48,16 +48,18 @@ enum class FunctionType {
     T_SINH, 
     T_COSH,    
     EXP_SINH,  
-    EXP_COSH   
+    EXP_COSH,
+    UNKNOWN_COMPOUND   
 };
 
 struct ParsedTerm {
     double coefficient = 1.0; // Includes sign
     FunctionType type = FunctionType::UNRECOGNIZED;
     std::vector<double> parameters; // For T_POW_N: {n}, EXP: {a}, SIN/COS: {omega}
+    std::string original_term_str;
 
-    // For debugging or easier interpretation
-    std::string original_term_string; // Optional, useful for debugging
+    // // For debugging or easier interpretation
+    // std::string original_term_string; // Optional, useful for debugging
 
     std::string text_representation() const {
         switch (type) {
@@ -91,14 +93,17 @@ private:
     std::vector<Token> tokens_;
     size_t token_idx_;
     std::vector<ParsedTerm> parsed_terms_;
+    std::vector<ParsedTerm> parse_expression_in_parentheses_helper();
 
     Token& current_token();
     Token& peek_token(size_t offset = 1);
     void consume_token();
-    double evaluate_simple_parameter();
-    void parse_term_with_coeff(double overall_sign);
+    // double evaluate_simple_parameter();
+    // void parse_term_with_coeff(double overall_sign);
     double evaluate_simple_parameter_argument();
-    ParsedTerm parse_single_function_factor();
+    ParsedTerm parse_factor();
+    ParsedTerm parse_multiplication(); // Handles terms connected by * or / (higher precedence)
+    ParsedTerm combine_multiplied_terms(const ParsedTerm& term1, const ParsedTerm& term2);
 };
 
 #endif // PARSER_H

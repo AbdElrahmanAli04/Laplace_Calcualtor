@@ -9,7 +9,7 @@
                 "main.cpp", 
                 "parser.cpp" , 
                 "laplace_transforms.cpp" , 
-                "Solve.cpp" ,                      // Path to your main
+                "Solve.cpp" ,
                 "-I../include",                    // Path to UI.h
                 "-o", "laplace_calc",              // Output binary name
                 "-lsfml-graphics",
